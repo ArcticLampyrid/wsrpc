@@ -69,7 +69,7 @@ func (c *jsonToValueConverter) tryRun(internalValue interface{}, rawValues json.
 		}
 	} else {
 		ValuesInJSON = make([]json.RawMessage, 1)
-		ValuesInJSON[1] = rawValues
+		ValuesInJSON[0] = rawValues
 	}
 	Values := make([]reflect.Value, c.nSystemValue+c.nValue)
 	if c.hasInternalValue {
