@@ -20,8 +20,24 @@ func IsJSONArray(in []byte) bool {
 		switch d.String() {
 		case "[":
 			return true
-		case "{":
+		default:
 			return false
+		}
+	}
+	return false
+}
+
+// IsJSONObject checks the input whether it is a JSON object or not.
+func IsJSONObject(in []byte) bool {
+	dec := json.NewDecoder(bytes.NewReader(in))
+	t, err := dec.Token()
+	if err != nil {
+		return false
+	}
+	if d, ok := t.(json.Delim); ok {
+		switch d.String() {
+		case "{":
+			return true
 		default:
 			return false
 		}

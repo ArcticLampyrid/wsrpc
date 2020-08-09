@@ -52,7 +52,7 @@ func (c *jsonToValueConverter) tryRun(internalValue interface{}, rawValues json.
 		if err != nil {
 			return nil, err
 		}
-	} else {
+	} else if IsJSONObject(rawValues) {
 		if c.nameToIndex == nil {
 			return nil, errors.New("no name information provided, cannot parse by-name arguments")
 		}
@@ -67,6 +67,9 @@ func (c *jsonToValueConverter) tryRun(internalValue interface{}, rawValues json.
 				ValuesInJSON[i] = value
 			}
 		}
+	} else {
+		ValuesInJSON = make([]json.RawMessage, 1)
+		ValuesInJSON[1] = rawValues
 	}
 	Values := make([]reflect.Value, c.nSystemValue+c.nValue)
 	if c.hasInternalValue {
