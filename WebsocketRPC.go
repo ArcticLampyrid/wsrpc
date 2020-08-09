@@ -38,7 +38,7 @@ type WebsocketRPCConn struct {
 	Session map[string]interface{}
 	//Timeout sets the time to wait for a response, default is 10 seconds
 	Timeout time.Duration
-	conn    *websocket.Conn
+	adapter MessageAdapter
 	seq     uint64
 	pending sync.Map
 }
@@ -177,7 +177,7 @@ func (rpcConn *WebsocketRPCConn) processMessage(rawMsg []byte) {
 	if err != nil {
 		return
 	}
-	_ = rpcConn.conn.WriteMessage(websocket.TextMessage, resultBytes)
+	_ = rpcConn.adapter.WriteMessage(resultBytes)
 }
 
 // MakeCall is used to make a proxy (as a normal function) to a remote procedure.
@@ -264,7 +264,7 @@ func (rpcConn *WebsocketRPCConn) CallLowLevel(name string, params json.RawMessag
 	if err != nil {
 		return err
 	}
-	err = rpcConn.conn.WriteMessage(websocket.TextMessage, resultBytes)
+	err = rpcConn.adapter.WriteMessage(resultBytes)
 	if err != nil {
 		return err
 	}
@@ -351,7 +351,7 @@ func (rpcConn *WebsocketRPCConn) NotifyLowLevel(name string, params json.RawMess
 	if err != nil {
 		return err
 	}
-	err = rpcConn.conn.WriteMessage(websocket.TextMessage, resultBytes)
+	err = rpcConn.adapter.WriteMessage(resultBytes)
 	return err
 }
 
@@ -468,7 +468,7 @@ func (rpc *WebsocketRPC) RegisterLowLevel(name string, method LowLevelRPCMethod)
 func (rpc *WebsocketRPC) Connect(conn *websocket.Conn) *WebsocketRPCConn {
 	r := WebsocketRPCConn{
 		RPC:     rpc,
-		conn:    conn,
+		adapter: NewWebsocketMessageAdapter(conn),
 		Timeout: 10 * time.Second,
 		Session: make(map[string]interface{})}
 	return &r
@@ -478,7 +478,7 @@ func (rpc *WebsocketRPC) Connect(conn *websocket.Conn) *WebsocketRPCConn {
 // It will block until the connection is closed.
 func (rpcConn *WebsocketRPCConn) ServeConn() {
 	for {
-		_, message, err := rpcConn.conn.ReadMessage()
+		message, err := rpcConn.adapter.ReadMessage()
 		if err != nil {
 			break
 		}
