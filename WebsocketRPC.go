@@ -367,6 +367,9 @@ func (rpcConn *WebsocketRPCConn) NotifyLowLevel(name string, params json.RawMess
 // If inName/outName is not nil, the length of them must be equal to the number of in/out arguments.
 // (not including special params described above, of course)
 func (rpc *WebsocketRPC) Register(name string, fobj interface{}, inName []string, outName []string) {
+	if fobj == nil {
+		return
+	}
 	fType := reflect.TypeOf(fobj)
 	fValue := reflect.ValueOf(fobj)
 	inConverter := newJSONToValueConverter(getAllInParamInfo(fType), typeOfPointToRPCConn, inName)
@@ -393,6 +396,9 @@ func (rpc *WebsocketRPC) Register(name string, fobj interface{}, inName []string
 // Moreover, the function can have no out parameters
 // or have one out parameter to return error info.
 func (rpc *WebsocketRPC) RegisterExplicitly(name string, fobj interface{}) error {
+	if fobj == nil {
+		return errors.New("nil pointer passed to RegisterExplicitly")
+	}
 	fType := reflect.TypeOf(fobj)
 	fValue := reflect.ValueOf(fobj)
 	hasErrInfoOut := false
@@ -452,6 +458,9 @@ func (rpc *WebsocketRPC) RegisterExplicitly(name string, fobj interface{}) error
 
 // RegisterLowLevel is used to register a normal function for RPC in low-level way (use json.RawMessage).
 func (rpc *WebsocketRPC) RegisterLowLevel(name string, method LowLevelRPCMethod) {
+	if method == nil {
+		return
+	}
 	rpc.method[name] = method
 }
 
