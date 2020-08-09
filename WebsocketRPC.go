@@ -466,9 +466,14 @@ func (rpc *WebsocketRPC) RegisterLowLevel(name string, method LowLevelRPCMethod)
 
 // Connect is a function to create a rpc connection binded to a websocket connection.
 func (rpc *WebsocketRPC) Connect(conn *websocket.Conn) *WebsocketRPCConn {
+	return rpc.ConnectAdapter(NewWebsocketMessageAdapter(conn))
+}
+
+// ConnectAdapter is a function to create a rpc connection binded to an adapter.
+func (rpc *WebsocketRPC) ConnectAdapter(adapter MessageAdapter) *WebsocketRPCConn {
 	r := WebsocketRPCConn{
 		RPC:     rpc,
-		adapter: NewWebsocketMessageAdapter(conn),
+		adapter: adapter,
 		Timeout: 10 * time.Second,
 		Session: make(map[string]interface{})}
 	return &r
