@@ -13,4 +13,4 @@ go get -u github.com/1354092549/wsrpc
 ## License
 This library is licensed under BSD 3-Clause License.  
 Please see [LICENSE](LICENSE.md) for licensing details.  
-You can use TLDRLegal to see a [summary](https://www.tldrlegal.com/l/bsd3) first. (***!!!NOT A LEGAL ADVICE!!!***)
+You can use TLDRLegal to see a [summary](https://www.tldrlegal.com/l/bsd3) first. (***!!!NOT LEGAL ADVICE!!!***)

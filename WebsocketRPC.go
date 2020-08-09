@@ -359,7 +359,7 @@ func (rpcConn *WebsocketRPCConn) NotifyLowLevel(name string, params json.RawMess
 //
 // The function can have a pointer argument to receive RPC connection object
 // (optional, must be the first in argument, do not provide name for this argument).
-// The function can also have a error return value. (optional, must be the last out argument,
+// The function can also have an error return value. (optional, must be the last out argument,
 // do not provide name for this argument)
 //
 // If inName is nil, then you can only call this function by postion (in JSON array).
