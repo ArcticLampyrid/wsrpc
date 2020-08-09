@@ -52,9 +52,6 @@ func (c *jsonToValueConverter) tryRun(internalValue interface{}, rawValues json.
 		if err != nil {
 			return nil, err
 		}
-		if len(ValuesInJSON) > c.nValue {
-			return nil, errors.New("too many arguments provided")
-		}
 	} else {
 		if c.nameToIndex == nil {
 			return nil, errors.New("no name information provided, cannot parse by-name arguments")
@@ -68,8 +65,6 @@ func (c *jsonToValueConverter) tryRun(internalValue interface{}, rawValues json.
 		for key, value := range namedValuesInJSON {
 			if i, ok := c.nameToIndex[key]; ok {
 				ValuesInJSON[i] = value
-			} else {
-				return nil, errors.New("unknown arguments provided")
 			}
 		}
 	}
