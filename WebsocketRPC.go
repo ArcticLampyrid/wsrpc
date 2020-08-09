@@ -180,7 +180,7 @@ func (rpcConn *WebsocketRPCConn) processMessage(rawMsg []byte) {
 	_ = rpcConn.conn.WriteMessage(websocket.TextMessage, resultBytes)
 }
 
-// MakeCall is used to make a call proxy as a normal RPC.
+// MakeCall is used to make a proxy (as a normal function) to a remote procedure.
 // About inName and outName, you can see details in Register.
 func (rpcConn *WebsocketRPCConn) MakeCall(name string, fptr interface{}, inName []string, outName []string) {
 	fobj := reflect.ValueOf(fptr).Elem()
@@ -258,31 +258,95 @@ func (rpcConn *WebsocketRPCConn) CallLowLevel(name string, params json.RawMessag
 		JSONRPC: "2.0",
 		Method:  &name,
 		Params:  params}
-	if reply != nil {
-		done := make(chan *rpcMessage, 1)
-		msg.ID = rpcConn.allocRequestSeq(done)
-		resultBytes, err := json.Marshal(msg)
-		if err != nil {
-			return err
-		}
-		err = rpcConn.conn.WriteMessage(websocket.TextMessage, resultBytes)
-		if err != nil {
-			return err
-		}
-		var r *rpcMessage
-		timer := time.NewTimer(rpcConn.Timeout)
-		select {
-		case r = <-done:
-			timer.Stop()
-		case <-timer.C:
-			return errors.New("RPC call timed out")
-		}
-		if r.Error != nil {
-			return r.Error
-		}
-		*reply = r.Result
-		return nil
+	done := make(chan *rpcMessage, 1)
+	msg.ID = rpcConn.allocRequestSeq(done)
+	resultBytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
 	}
+	err = rpcConn.conn.WriteMessage(websocket.TextMessage, resultBytes)
+	if err != nil {
+		return err
+	}
+	var r *rpcMessage
+	timer := time.NewTimer(rpcConn.Timeout)
+	select {
+	case r = <-done:
+		timer.Stop()
+	case <-timer.C:
+		return errors.New("RPC call timed out")
+	}
+	if r.Error != nil {
+		return r.Error
+	}
+	if reply != nil {
+		*reply = r.Result
+	}
+	return nil
+}
+
+// MakeNotify is used to make a proxy (as a normal function) to send a notification.
+// About inName, you can see details in Register.
+func (rpcConn *WebsocketRPCConn) MakeNotify(name string, fptr interface{}, inName []string) {
+	fobj := reflect.ValueOf(fptr).Elem()
+	fType := fobj.Type()
+	inConverter := newValueToJSONConverter(getAllInParamInfo(fType), inName, false)
+	nOut := fType.NumOut()
+	hasErrInfo := false
+	switch nOut {
+	case 0:
+		break
+	case 1:
+		if fType.Out(0) == typeOfError {
+			hasErrInfo = true
+			nOut--
+		} else {
+			panic(errors.New("the function must have no return value or return an error"))
+		}
+	}
+	makeErrorResult := func(err error) []reflect.Value {
+		if !hasErrInfo {
+			panic(err)
+		}
+		return []reflect.Value{reflect.ValueOf(err)}
+	}
+	processorFunc := func(in []reflect.Value) []reflect.Value {
+		var err error
+		argsRaw, err := inConverter.tryRun(in)
+		if err != nil {
+			return makeErrorResult(err)
+		}
+		err = rpcConn.NotifyLowLevel(name, argsRaw)
+		if err != nil {
+			return makeErrorResult(err)
+		}
+		if hasErrInfo {
+			return []reflect.Value{reflect.Zero(reflect.TypeOf((*error)(nil)).Elem())}
+		}
+		return []reflect.Value{}
+	}
+	v := reflect.MakeFunc(fType, processorFunc)
+	fobj.Set(v)
+}
+
+// NotifyExplicitly provides a `net/rpc`-like way to send a notification.
+// In this way, the struct is defined explicitly by the caller
+func (rpcConn *WebsocketRPCConn) NotifyExplicitly(name string, params interface{}) error {
+	paramBytes, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+	rawParam := json.RawMessage(paramBytes)
+	err = rpcConn.NotifyLowLevel(name, rawParam)
+	return err
+}
+
+// NotifyLowLevel is used to send a notification in low-level way (use json.RawMessage).
+func (rpcConn *WebsocketRPCConn) NotifyLowLevel(name string, params json.RawMessage) error {
+	msg := rpcMessage{
+		JSONRPC: "2.0",
+		Method:  &name,
+		Params:  params}
 	resultBytes, err := json.Marshal(msg)
 	if err != nil {
 		return err

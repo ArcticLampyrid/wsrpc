@@ -17,6 +17,7 @@ var upgrader = websocket.Upgrader{
 }
 
 var rpcServer *wsrpc.WebsocketRPC
+var receivedNotification bool = false
 
 type addArgs struct {
 	A int `json:"a"`
@@ -24,6 +25,10 @@ type addArgs struct {
 }
 type addReply struct {
 	Result int `json:"result"`
+}
+
+func rpcMethodReceiveNotification() {
+	receivedNotification = true
 }
 
 func rpcMethodAdd(a int, b int) int {
@@ -55,6 +60,7 @@ func newRPCServer() *wsrpc.WebsocketRPC {
 	rpcServer := wsrpc.NewWebsocketRPC()
 	rpcServer.Register("add", rpcMethodAdd, []string{"a", "b"}, []string{"result"})
 	rpcServer.Register("hello", rpcMethodHello, []string{"name"}, nil)
+	rpcServer.Register("receive_notification", rpcMethodReceiveNotification, []string{}, []string{})
 	rpcServer.RegisterExplicitly("welcome", rpcMethodWelcome)
 	return rpcServer
 }
@@ -105,6 +111,15 @@ func TestWebsocketRPC(t *testing.T) {
 	welcomeResult := welcome("wsrpc")
 	if welcomeResult != "Welcome, wsrpc" {
 		t.Error("expected \"Welcome, wsrpc\" but got \"" + welcomeResult + "\"")
+	}
+
+	var notify func()
+	rpcConn.MakeNotify("receive_notification", &notify, []string{})
+	notify()
+	//Wait for the server receiving
+	time.Sleep(time.Duration(2) * time.Second)
+	if !receivedNotification {
+		t.Error("the server failed to receive the notification")
 	}
 }
 
