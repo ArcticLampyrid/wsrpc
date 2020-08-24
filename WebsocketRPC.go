@@ -370,8 +370,11 @@ func (rpc *WebsocketRPC) Register(name string, fobj interface{}, inName []string
 	if fobj == nil {
 		return
 	}
-	fType := reflect.TypeOf(fobj)
 	fValue := reflect.ValueOf(fobj)
+	if !fValue.IsValid() || fValue.IsZero() {
+		return
+	}
+	fType := reflect.TypeOf(fobj)
 	inConverter := newJSONToValueConverter(getAllInParamInfo(fType), typeOfPointToRPCConn, inName)
 	outConverter := newValueToJSONConverter(getAllOutParamInfo(fType), outName, true)
 	fLowLevel := func(rpcConn *WebsocketRPCConn, rawArgs json.RawMessage, rawReply *json.RawMessage) error {
@@ -399,8 +402,11 @@ func (rpc *WebsocketRPC) RegisterExplicitly(name string, fobj interface{}) error
 	if fobj == nil {
 		return errors.New("nil pointer passed to RegisterExplicitly")
 	}
-	fType := reflect.TypeOf(fobj)
 	fValue := reflect.ValueOf(fobj)
+	if !fValue.IsValid() || fValue.IsZero() {
+		return errors.New("nil pointer passed to RegisterExplicitly")
+	}
+	fType := reflect.TypeOf(fobj)
 	hasErrInfoOut := false
 	nIn := fType.NumIn()
 	nOut := fType.NumOut()
