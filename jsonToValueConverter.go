@@ -52,6 +52,12 @@ func (c *jsonToValueConverter) tryRun(internalValue interface{}, rawValues json.
 		if err != nil {
 			return nil, err
 		}
+		if c.nValue == 1 && (c.valueType[0].Kind() == reflect.Array || c.valueType[0].Kind() == reflect.Slice) {
+			if len(ValuesInJSON) < 1 || !IsJSONArray(ValuesInJSON[0]) {
+				ValuesInJSON = make([]json.RawMessage, 1)
+				ValuesInJSON[0] = rawValues
+			}
+		}
 	} else if IsJSONObject(rawValues) {
 		if c.nameToIndex == nil {
 			return nil, errors.New("no name information provided, cannot parse by-name arguments")
