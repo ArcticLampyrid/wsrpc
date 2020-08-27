@@ -1,10 +1,15 @@
 package wsrpc
 
-import "github.com/gorilla/websocket"
+import (
+	"sync"
+
+	"github.com/gorilla/websocket"
+)
 
 // WebsocketMessageAdapter is an adapter for rpc services to work with gorilla/websocket
 type WebsocketMessageAdapter struct {
 	conn *websocket.Conn
+	mux  sync.Mutex
 }
 
 // NewWebsocketMessageAdapter creates a adapter.
@@ -20,5 +25,7 @@ func (a *WebsocketMessageAdapter) ReadMessage() ([]byte, error) {
 
 // WriteMessage writes a message. If the connection is closed, this function must return an error.
 func (a *WebsocketMessageAdapter) WriteMessage(data []byte) error {
+	a.mux.Lock()
+	defer a.mux.Unlock()
 	return a.conn.WriteMessage(websocket.TextMessage, data)
 }
