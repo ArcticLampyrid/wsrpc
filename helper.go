@@ -59,18 +59,18 @@ func IsJSONNull(in []byte) bool {
 }
 
 func getAllInParamInfo(fType reflect.Type) []reflect.Type {
-	len := fType.NumIn()
-	r := make([]reflect.Type, len)
-	for i := 0; i < len; i++ {
+	length := fType.NumIn()
+	r := make([]reflect.Type, length)
+	for i := 0; i < length; i++ {
 		r[i] = fType.In(i)
 	}
 	return r
 }
 
 func getAllOutParamInfo(fType reflect.Type) []reflect.Type {
-	len := fType.NumOut()
-	r := make([]reflect.Type, len)
-	for i := 0; i < len; i++ {
+	length := fType.NumOut()
+	r := make([]reflect.Type, length)
+	for i := 0; i < length; i++ {
 		r[i] = fType.Out(i)
 	}
 	return r
