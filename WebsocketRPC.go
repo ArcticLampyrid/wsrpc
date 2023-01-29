@@ -373,13 +373,11 @@ func (rpc *WebsocketRPC) Register(name string, fobj interface{}, inCodec RPCPara
 	}
 	fType := reflect.TypeOf(fobj)
 	inParamInfo := getAllInParamInfo(fType)
-	outParamInfo := getAllOutParamInfo(fType)
-	nOut := len(outParamInfo)
+	nOut := fType.NumOut()
 	hasErrInfo := false
-	if nOut > 0 && outParamInfo[nOut-1] == typeOfError {
+	if nOut > 0 && fType.Out(nOut-1) == typeOfError {
 		hasErrInfo = true
 		nOut--
-		outParamInfo = outParamInfo[:nOut]
 	}
 	inThis := false
 	if len(inParamInfo) > 0 && inParamInfo[0] == typeOfPointToRPCConn {
