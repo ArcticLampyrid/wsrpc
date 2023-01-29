@@ -229,6 +229,7 @@ func (rpcConn *WebsocketRPCConn) MakeCall(name string, fptr interface{}, inCodec
 		}
 		return reply
 	}
+	// skipcq: GO-W1006
 	v := reflect.MakeFunc(fType, processorFunc)
 	fobj.Set(v)
 }
@@ -324,6 +325,7 @@ func (rpcConn *WebsocketRPCConn) MakeNotify(name string, fptr interface{}, inCod
 		}
 		return []reflect.Value{}
 	}
+	// skipcq: GO-W1006
 	v := reflect.MakeFunc(fType, processorFunc)
 	fobj.Set(v)
 }
