@@ -292,7 +292,7 @@ func (rpcConn *WebsocketRPCConn) MakeNotify(name string, fptr interface{}, inCod
 	hasErrInfo := false
 	switch nOut {
 	case 0:
-		break
+		// do nothing
 	case 1:
 		if fType.Out(0) == typeOfError {
 			hasErrInfo = true
@@ -300,6 +300,8 @@ func (rpcConn *WebsocketRPCConn) MakeNotify(name string, fptr interface{}, inCod
 		} else {
 			panic(errors.New("the function must have no return value or return an error"))
 		}
+	default:
+		panic(errors.New("the function must have no return value or return an error"))
 	}
 	makeErrorResult := func(err error) []reflect.Value {
 		if !hasErrInfo {
