@@ -13,7 +13,7 @@ func NewRPCOriginalParamsCodec() *RPCOriginalParamsCodec {
 	return &RPCOriginalParamsCodec{}
 }
 
-func (c *RPCOriginalParamsCodec) Encode(values []reflect.Value) (json.RawMessage, error) {
+func (*RPCOriginalParamsCodec) Encode(values []reflect.Value) (json.RawMessage, error) {
 	nParams := len(values)
 	if nParams == 0 {
 		return jsonNullValue, nil
@@ -23,7 +23,7 @@ func (c *RPCOriginalParamsCodec) Encode(values []reflect.Value) (json.RawMessage
 	return json.Marshal(values[0].Interface())
 }
 
-func (c *RPCOriginalParamsCodec) Decode(rawValues json.RawMessage, valueTypes []reflect.Type) ([]reflect.Value, error) {
+func (*RPCOriginalParamsCodec) Decode(rawValues json.RawMessage, valueTypes []reflect.Type) ([]reflect.Value, error) {
 	if len(valueTypes) == 0 {
 		return []reflect.Value{}, nil
 	} else if len(rawValues) != 0 {
