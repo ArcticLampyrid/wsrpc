@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-//LowLevelRPCMethod is an RPC method that send and receive raw messages
+// LowLevelRPCMethod is an RPC method that send and receive raw messages
 type LowLevelRPCMethod func(rpcConn *WebsocketRPCConn, arg json.RawMessage, reply *json.RawMessage) error
 
 type rpcMessage struct {
@@ -181,11 +181,10 @@ func (rpcConn *WebsocketRPCConn) processMessage(rawMsg []byte) {
 }
 
 // MakeCall is used to make a proxy (as a normal function) to a remote procedure.
-// About inName and outName, you can see details in Register.
-func (rpcConn *WebsocketRPCConn) MakeCall(name string, fptr interface{}, inName []string, outName []string) {
+// The format of params and result should be matched with inCodec and outCodec.
+func (rpcConn *WebsocketRPCConn) MakeCall(name string, fptr interface{}, inCodec RPCParamsCodec, outCodec RPCParamsCodec) {
 	fobj := reflect.ValueOf(fptr).Elem()
 	fType := fobj.Type()
-	inConverter := newValueToJSONConverter(getAllInParamInfo(fType), inName, false)
 	outParamInfo := getAllOutParamInfo(fType)
 	nOut := len(outParamInfo)
 	hasErrInfo := false
@@ -194,7 +193,6 @@ func (rpcConn *WebsocketRPCConn) MakeCall(name string, fptr interface{}, inName 
 		nOut--
 		outParamInfo = outParamInfo[:nOut]
 	}
-	outConverter := newJSONToValueConverter(outParamInfo, nil, outName)
 	makeErrorResult := func(err error) []reflect.Value {
 		if !hasErrInfo {
 			panic(err)
@@ -213,7 +211,7 @@ func (rpcConn *WebsocketRPCConn) MakeCall(name string, fptr interface{}, inName 
 	}
 	processorFunc := func(in []reflect.Value) []reflect.Value {
 		var err error
-		argsRaw, err := inConverter.tryRun(in)
+		argsRaw, err := inCodec.Encode(in)
 		if err != nil {
 			return makeErrorResult(err)
 		}
@@ -222,7 +220,7 @@ func (rpcConn *WebsocketRPCConn) MakeCall(name string, fptr interface{}, inName 
 		if err != nil {
 			return makeErrorResult(err)
 		}
-		reply, err := outConverter.tryRun(nil, replyRaw)
+		reply, err := outCodec.Decode(replyRaw, outParamInfo)
 		if err != nil {
 			return makeErrorResult(err)
 		}
@@ -286,11 +284,10 @@ func (rpcConn *WebsocketRPCConn) CallLowLevel(name string, params json.RawMessag
 }
 
 // MakeNotify is used to make a proxy (as a normal function) to send a notification.
-// About inName, you can see details in Register.
-func (rpcConn *WebsocketRPCConn) MakeNotify(name string, fptr interface{}, inName []string) {
+// The format of params should be matched with inCodec.
+func (rpcConn *WebsocketRPCConn) MakeNotify(name string, fptr interface{}, inCodec RPCParamsCodec) {
 	fobj := reflect.ValueOf(fptr).Elem()
 	fType := fobj.Type()
-	inConverter := newValueToJSONConverter(getAllInParamInfo(fType), inName, false)
 	nOut := fType.NumOut()
 	hasErrInfo := false
 	switch nOut {
@@ -312,7 +309,7 @@ func (rpcConn *WebsocketRPCConn) MakeNotify(name string, fptr interface{}, inNam
 	}
 	processorFunc := func(in []reflect.Value) []reflect.Value {
 		var err error
-		argsRaw, err := inConverter.tryRun(in)
+		argsRaw, err := inCodec.Encode(in)
 		if err != nil {
 			return makeErrorResult(err)
 		}
@@ -362,11 +359,9 @@ func (rpcConn *WebsocketRPCConn) NotifyLowLevel(name string, params json.RawMess
 // The function can also have an error return value. (optional, must be the last out argument,
 // do not provide name for this argument)
 //
-// If inName is nil, then you can only call this function by postion (in JSON array).
-// If outName is not nil, then it will return result by name (in JSON object).
-// If inName/outName is not nil, the length of them must be equal to the number of in/out arguments.
+// The format of params and result should be matched with inCodec and outCodec.
 // (not including special params described above, of course)
-func (rpc *WebsocketRPC) Register(name string, fobj interface{}, inName []string, outName []string) {
+func (rpc *WebsocketRPC) Register(name string, fobj interface{}, inCodec RPCParamsCodec, outCodec RPCParamsCodec) {
 	if fobj == nil {
 		return
 	}
@@ -375,16 +370,40 @@ func (rpc *WebsocketRPC) Register(name string, fobj interface{}, inName []string
 		return
 	}
 	fType := reflect.TypeOf(fobj)
-	inConverter := newJSONToValueConverter(getAllInParamInfo(fType), typeOfPointToRPCConn, inName)
-	outConverter := newValueToJSONConverter(getAllOutParamInfo(fType), outName, true)
+	inParamInfo := getAllInParamInfo(fType)
+	outParamInfo := getAllOutParamInfo(fType)
+	nOut := len(outParamInfo)
+	hasErrInfo := false
+	if nOut > 0 && outParamInfo[nOut-1] == typeOfError {
+		hasErrInfo = true
+		nOut--
+		outParamInfo = outParamInfo[:nOut]
+	}
+	inThis := false
+	if len(inParamInfo) > 0 && inParamInfo[0] == typeOfPointToRPCConn {
+		inThis = true
+		inParamInfo = inParamInfo[1:]
+	}
 	fLowLevel := func(rpcConn *WebsocketRPCConn, rawArgs json.RawMessage, rawReply *json.RawMessage) error {
 		var err error
-		args, err := inConverter.tryRun(rpcConn, rawArgs)
+		args, err := inCodec.Decode(rawArgs, inParamInfo)
 		if err != nil {
 			return RPCInvalidParamsError
 		}
-		reply := fValue.Call(args)
-		*rawReply, err = outConverter.tryRun(reply)
+		var reply []reflect.Value
+		if inThis {
+			reply = fValue.Call(append([]reflect.Value{reflect.ValueOf(rpcConn)}, args...))
+		} else {
+			reply = fValue.Call(args)
+		}
+		if hasErrInfo {
+			errorOut := reply[nOut].Interface()
+			if errorOut != nil {
+				return errorOut.(error)
+			}
+			reply = reply[:nOut]
+		}
+		*rawReply, err = outCodec.Encode(reply)
 		return err
 	}
 	rpc.RegisterLowLevel(name, fLowLevel)

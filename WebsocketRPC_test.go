@@ -2,6 +2,7 @@ package wsrpc_test
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -58,9 +59,9 @@ func rpcMethodWelcome(rpcConn *wsrpc.WebsocketRPCConn, args welcomeArgs, reply *
 
 func newRPCServer() *wsrpc.WebsocketRPC {
 	rpcServer := wsrpc.NewWebsocketRPC()
-	rpcServer.Register("add", rpcMethodAdd, []string{"a", "b"}, []string{"result"})
-	rpcServer.Register("hello", rpcMethodHello, []string{"name"}, nil)
-	rpcServer.Register("receive_notification", rpcMethodReceiveNotification, []string{}, []string{})
+	rpcServer.Register("add", rpcMethodAdd, wsrpc.NewRPCNamedParamsCodec([]string{"a", "b"}), wsrpc.NewRPCNamedParamsCodec([]string{"result"}))
+	rpcServer.Register("hello", rpcMethodHello, wsrpc.NewRPCMixedParamsCodec([]string{"name"}), wsrpc.NewRPCPositionalParamsCodec())
+	rpcServer.Register("receive_notification", rpcMethodReceiveNotification, wsrpc.NewRPCOriginalParamsCodec(), wsrpc.NewRPCOriginalParamsCodec())
 	rpcServer.RegisterExplicitly("welcome", rpcMethodWelcome)
 	return rpcServer
 }
@@ -91,10 +92,10 @@ func TestWebsocketRPC(t *testing.T) {
 		t.Error(err)
 	}
 	if addResult.Result != 3 {
-		t.Error("expected 3 but got " + string(addResult.Result))
+		t.Error("expected 3 but got " + fmt.Sprint(addResult.Result))
 	}
 	var hello func(name string) (string, string, error)
-	rpcConn.MakeCall("hello", &hello, nil, nil)
+	rpcConn.MakeCall("hello", &hello, wsrpc.NewRPCPositionalParamsCodec(), wsrpc.NewRPCPositionalParamsCodec())
 	helloA, helloB, err := hello("wsrpc")
 	if err != nil {
 		t.Error(err)
@@ -107,14 +108,14 @@ func TestWebsocketRPC(t *testing.T) {
 	}
 
 	var welcome func(name string) string
-	rpcConn.MakeCall("welcome", &welcome, []string{"name"}, []string{"message"})
+	rpcConn.MakeCall("welcome", &welcome, wsrpc.NewRPCNamedParamsCodec([]string{"name"}), wsrpc.NewRPCNamedParamsCodec([]string{"message"}))
 	welcomeResult := welcome("wsrpc")
 	if welcomeResult != "Welcome, wsrpc" {
 		t.Error("expected \"Welcome, wsrpc\" but got \"" + welcomeResult + "\"")
 	}
 
 	var notify func()
-	rpcConn.MakeNotify("receive_notification", &notify, []string{})
+	rpcConn.MakeNotify("receive_notification", &notify, wsrpc.NewRPCOriginalParamsCodec())
 	notify()
 	//Wait for the server receiving
 	time.Sleep(time.Duration(2) * time.Second)
