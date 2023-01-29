@@ -1,4 +1,4 @@
-module github.com/1354092549/wsrpc
+module github.com/ArcticLampyrid/wsrpc
 
 go 1.14
 

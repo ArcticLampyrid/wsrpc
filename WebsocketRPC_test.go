@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/1354092549/wsrpc"
+	"github.com/ArcticLampyrid/wsrpc"
 	"github.com/gorilla/websocket"
 )
 
