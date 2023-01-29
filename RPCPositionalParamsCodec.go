@@ -14,7 +14,7 @@ func NewRPCPositionalParamsCodec() *RPCPositionalParamsCodec {
 	return &RPCPositionalParamsCodec{}
 }
 
-func (c *RPCPositionalParamsCodec) Encode(values []reflect.Value) (json.RawMessage, error) {
+func (*RPCPositionalParamsCodec) Encode(values []reflect.Value) (json.RawMessage, error) {
 	nParams := len(values)
 	result := make([]interface{}, nParams)
 	for i := 0; i < nParams; i++ {
@@ -23,7 +23,7 @@ func (c *RPCPositionalParamsCodec) Encode(values []reflect.Value) (json.RawMessa
 	return json.Marshal(result)
 }
 
-func (c *RPCPositionalParamsCodec) Decode(rawValues json.RawMessage, valueTypes []reflect.Type) ([]reflect.Value, error) {
+func (*RPCPositionalParamsCodec) Decode(rawValues json.RawMessage, valueTypes []reflect.Type) ([]reflect.Value, error) {
 	if len(valueTypes) == 0 {
 		// empty
 		return []reflect.Value{}, nil
