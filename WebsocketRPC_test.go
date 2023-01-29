@@ -52,7 +52,7 @@ type welcomeReply struct {
 	Message string `json:"message"`
 }
 
-func rpcMethodWelcome(rpcConn *wsrpc.WebsocketRPCConn, args welcomeArgs, reply *welcomeReply) error {
+func rpcMethodWelcome(_ *wsrpc.WebsocketRPCConn, args welcomeArgs, reply *welcomeReply) error {
 	*reply = welcomeReply{Message: "Welcome, " + args.Name}
 	return nil
 }
