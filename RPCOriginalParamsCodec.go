@@ -40,5 +40,8 @@ func (*RPCOriginalParamsCodec) Decode(rawValues json.RawMessage, valueTypes []re
 	if err != nil {
 		return nil, err
 	}
+	if pType.Kind() != reflect.Ptr {
+		value = value.Elem()
+	}
 	return []reflect.Value{value}, nil
 }

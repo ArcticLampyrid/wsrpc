@@ -8,8 +8,9 @@ import (
 )
 
 type RPCNamedParamsCodec struct {
-	names    []string
-	nameToID map[string]int
+	names          []string
+	nameToID       map[string]int
+	allowExcessive bool
 }
 
 func constructRPCNamedParamsCodec(names []string) RPCNamedParamsCodec {
@@ -20,6 +21,7 @@ func constructRPCNamedParamsCodec(names []string) RPCNamedParamsCodec {
 	return RPCNamedParamsCodec{
 		names,
 		nameToID,
+		true,
 	}
 }
 
@@ -31,6 +33,7 @@ func NewRPCNamedParamsCodec(names []string) *RPCNamedParamsCodec {
 	return &RPCNamedParamsCodec{
 		names,
 		nameToID,
+		true,
 	}
 }
 
@@ -79,15 +82,32 @@ func (c *RPCNamedParamsCodec) Decode(rawValues json.RawMessage, valueTypes []ref
 		}
 	}
 	for key, value := range namedValuesInJSON {
-		i := c.nameToID[key]
+		i, ok := c.nameToID[key]
+		if !ok {
+			if !c.allowExcessive {
+				return nil, errors.New("too many arguments")
+			}
+			continue
+		}
 		err = json.Unmarshal(value, values[i].Interface())
 		if err != nil {
 			return nil, err
 		}
+	}
+	for i := 0; i < len(values); i++ {
 		pType := valueTypes[i]
 		if pType.Kind() != reflect.Ptr {
 			values[i] = values[i].Elem()
 		}
 	}
 	return values, nil
+}
+
+func (c *RPCNamedParamsCodec) AllowExcessive() bool {
+	return c.allowExcessive
+}
+
+func (c *RPCNamedParamsCodec) WithAllowExcessive(allowExcessive bool) *RPCNamedParamsCodec {
+	c.allowExcessive = allowExcessive
+	return c
 }

@@ -8,10 +8,13 @@ import (
 )
 
 type RPCPositionalParamsCodec struct {
+	allowExcessive bool
 }
 
 func NewRPCPositionalParamsCodec() *RPCPositionalParamsCodec {
-	return &RPCPositionalParamsCodec{}
+	return &RPCPositionalParamsCodec{
+		true,
+	}
 }
 
 func (*RPCPositionalParamsCodec) Encode(values []reflect.Value) (json.RawMessage, error) {
@@ -23,7 +26,7 @@ func (*RPCPositionalParamsCodec) Encode(values []reflect.Value) (json.RawMessage
 	return json.Marshal(result)
 }
 
-func (*RPCPositionalParamsCodec) Decode(rawValues json.RawMessage, valueTypes []reflect.Type) ([]reflect.Value, error) {
+func (c *RPCPositionalParamsCodec) Decode(rawValues json.RawMessage, valueTypes []reflect.Type) ([]reflect.Value, error) {
 	if len(valueTypes) == 0 {
 		// empty
 		return []reflect.Value{}, nil
@@ -56,14 +59,31 @@ func (*RPCPositionalParamsCodec) Decode(rawValues json.RawMessage, valueTypes []
 		}
 	}
 	for i, curArg := range valuesInJSON {
+		if i >= len(valueTypes) {
+			if !c.allowExcessive {
+				return nil, errors.New("too many arguments")
+			}
+			break
+		}
 		err = json.Unmarshal(curArg, values[i].Interface())
 		if err != nil {
 			return nil, err
 		}
+	}
+	for i := 0; i < len(values); i++ {
 		pType := valueTypes[i]
 		if pType.Kind() != reflect.Ptr {
 			values[i] = values[i].Elem()
 		}
 	}
 	return values, nil
+}
+
+func (c *RPCPositionalParamsCodec) AllowExcessive() bool {
+	return c.allowExcessive
+}
+
+func (c *RPCPositionalParamsCodec) WithAllowExcessive(allowExcessive bool) *RPCPositionalParamsCodec {
+	c.allowExcessive = allowExcessive
+	return c
 }

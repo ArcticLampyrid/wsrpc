@@ -47,3 +47,18 @@ func (c *RPCMixedParamsCodec) Decode(rawValues json.RawMessage, valueTypes []ref
 	}
 	return nil, errors.New("RPCNamedParamsCodec can handle array and object and null only")
 }
+
+func (c *RPCMixedParamsCodec) AllowExcessive() bool {
+	value1 := c.positionalCodec.AllowExcessive()
+	value2 := c.namedCodec.AllowExcessive()
+	if value1 != value2 {
+		panic(errors.New("allow excessive mismatch for internal codecs"))
+	}
+	return value1
+}
+
+func (c *RPCMixedParamsCodec) WithAllowExcessive(allowExcessive bool) *RPCMixedParamsCodec {
+	c.positionalCodec.WithAllowExcessive(allowExcessive)
+	c.namedCodec.WithAllowExcessive(allowExcessive)
+	return c
+}
